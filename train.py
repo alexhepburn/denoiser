@@ -87,7 +87,6 @@ def get_noise(inputs):
 def main(cfg) -> None:
     hydra_path = os.getcwd()
     wandb.init(project='denoising', config=cfg)
-    cfg = cfg['']['']['configs']
     device = 'cuda' if torch.cuda.is_available() and not cfg.no_cuda else 'cpu'
     train_dataloader, test_dataloader = configure_datasets(cfg)
 
