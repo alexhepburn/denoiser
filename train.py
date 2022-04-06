@@ -142,5 +142,8 @@ def main(cfg) -> None:
                 model.train()
             iteration += 1
 
+        # Save model every epoch
+        torch.save(model.state_dict(), '%d-%d-checkpoint.pth'%(epoch, iteration))
+
 if __name__ == "__main__":
     main()

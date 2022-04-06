@@ -6,6 +6,8 @@ dataset:
   batch_size: 128
   test_batch_size: 1
   num_workers: 0
+  min: 0.0
+  max: 1.0
 epochs: 100
 loss:
   name: 'mse'
