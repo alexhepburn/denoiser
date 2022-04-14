@@ -10,10 +10,12 @@ dataset:
   max: 1.0
 epochs: 100
 loss:
-  name: 'mse'
+  name: 'nlpd'
   kwargs:
-    rate: 1.0
-lr: 1e-3
+    stages: 5
+    device: 'cuda'
+    dims: 1
+lr: 1e-2
 model:
   descriptions: 'BF_CNN_gray'
   kernel_size: 3

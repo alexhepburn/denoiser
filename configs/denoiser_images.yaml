@@ -1,7 +1,7 @@
 dataset:
-  type: 'noise'
+  type: 'h5'
   dir:
-    train: ''
+    train: '/user/work/ah13558/train.h5'
     test: '/user/home/ah13558/code/kodak/PhotoCD_PCD0992'
   batch_size: 128
   test_batch_size: 1
