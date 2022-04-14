@@ -6,7 +6,7 @@ import torch
 import torchvision
 import torchvision.datasets as datasets
 
-from hydra import compose, initialize
+from hydra import compose, initialize_config_dir
 from omegaconf import DictConfig, OmegaConf
 import hydra
 import wandb
@@ -57,25 +57,28 @@ from torch.utils.data.distributed import DistributedSampler
 
 def configure_datasets(cfg):
     if cfg.dataset.type == 'h5':
-        train_dataloader = torch.utils.data.DataLoader(
-            DistributedSampler(h5Dataset(cfg.dataset.dir.train)),
-            batch_size=cfg.dataset.batch_size,
-            num_workers=cfg.dataset.num_workers,
-            shuffle=True)
+        dataset = h5Dataset(cfg.dataset.dir.train)
     elif cfg.dataset.type == 'noise':
-        train_dataloader=torch.utils.data.DataLoader(
-            DistributedSampler(NoiseDataset(min=cfg.dataset.min, max=cfg.dataset.max)),
-            batch_size=cfg.dataset.test_batch_size,
-            num_workers=cfg.dataset.num_workers,
-            shuffle=False)
+        dataset = NoiseDataset(min=cfg.dataset.min, max=cfg.dataset.max)
+
+    train_sampler = DistributedSampler(dataset)
+
+    test_dataset = Kodak(cfg.dataset.dir.test)
+    test_sampler = DistributedSampler(test_dataset, shuffle=False)
+
+    train_dataloader=torch.utils.data.DataLoader(
+        dataset,
+        batch_size=cfg.dataset.batch_size,
+        num_workers=cfg.dataset.num_workers,
+        sampler=train_sampler)
 
     test_dataloader = torch.utils.data.DataLoader(
-        Kodak(cfg.dataset.dir.test),
+        test_dataset,
         batch_size=cfg.dataset.test_batch_size,
         num_workers=cfg.dataset.num_workers,
-        shuffle=False)
+        sampler=test_sampler)
     
-    return train_dataloader, test_dataloader
+    return train_dataloader, test_dataloader, train_sampler, test_sampler
 
 def get_noise(inputs):
     noise = torch.randn_like(inputs)
@@ -87,16 +90,16 @@ def get_noise(inputs):
 
 @hydra.main()
 def main(cfg) -> None:
-    hydra_path = os.getcwd()
-    wandb.init(project='denoising', config=cfg)
     device = 'cuda' if torch.cuda.is_available() and not cfg.no_cuda else 'cpu'
     torch.distributed.init_process_group(backend="nccl")
-    import os
     local_rank = torch.distributed.get_rank()
+    print(local_rank)
+    if local_rank == 0:
+        wandb.init(project='denoising', config=cfg)
     torch.cuda.set_device(local_rank)
     device = torch.device("cuda", local_rank)
 
-    train_dataloader, test_dataloader = configure_datasets(cfg)
+    train_dataloader, test_dataloader, train_sampler, test_sampler = configure_datasets(cfg)
 
     model = BF_CNN(cfg.model)
     model.to(device)
@@ -112,6 +115,7 @@ def main(cfg) -> None:
     iteration = 0
     for epoch in range(cfg.epochs):
         model.train()
+        train_sampler.set_epoch(epoch)
         for i, inputs in enumerate(train_dataloader):
             inputs = inputs.to('cuda')
             noisy_input = inputs + get_noise(inputs)
@@ -126,13 +130,14 @@ def main(cfg) -> None:
                 p = psnr(outputs, inputs)
                 m = ssim(outputs, inputs)
 
-                print(f'Train epoch {epoch}: ['
-                    f'{i*len(inputs)}/{len(train_dataloader.dataset)}'
-                    f' ({100. * i / len(train_dataloader):.0f}%)]'
-                    f'\tLoss: {loss.item():.3f} |'
-                    f'\tPSNR: {p:.3f} |'
-                    f'\tSSIM: {m:.3f} |')
-                update_logs(loss.item(), p, m, iteration, optimizer)
+                if local_rank == 0:
+                    print(f'Train epoch {epoch}: ['
+                        f'{i*len(inputs)}/{len(train_dataloader.dataset)}'
+                        f' ({100. * i / len(train_dataloader):.0f}%)]'
+                        f'\tLoss: {loss.item():.3f} |'
+                        f'\tPSNR: {p:.3f} |'
+                        f'\tSSIM: {m:.3f} |')
+                    update_logs(loss.item(), p, m, iteration, optimizer)
 
             if iteration % cfg.eval_iter == 0:
                 model.eval()
@@ -145,16 +150,15 @@ def main(cfg) -> None:
                     test_psnr.append(psnr(test_outputs, test_batch))
                     test_ssim.append(ssim(test_outputs, test_batch))
 
-                update_logs(
-                    np.mean(test_losses), np.mean(test_psnr), np.mean(test_ssim), iteration, optimizer, mode='test')
-                update_plots(noisy_test[0], test_outputs[0], iteration, mode='test')
+                if local_rank == 0:
+                    update_logs(
+                        np.mean(test_losses), np.mean(test_psnr), np.mean(test_ssim), iteration, optimizer, mode='test')
+                    update_plots(noisy_test[0], test_outputs[0], iteration, mode='test')
+                    torch.save(model.module.state_dict(), '%d-%d-checkpoint.pth'%(epoch, iteration))
 
                 del test_batch
                 del noisy_test
                 del test_outputs
-
-                # Save model every epoch
-                torch.save(model.module.state_dict(), '%d-%d-checkpoint.pth'%(epoch, iteration))
 
                 model.train()
             gc.collect()
@@ -173,6 +177,6 @@ if __name__ == "__main__":
     parser.add_argument("--config_name", type=str)
     args = parser.parse_args()
 
-    initialize(config_path=args.config_dir)
+    initialize_config_dir(config_dir=args.config_dir)
     cfg = compose(config_name=args.config_name)
     main(cfg)

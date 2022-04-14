@@ -15,7 +15,7 @@ loss:
     stages: 5
     device: 'cuda'
     dims: 1
-lr: 1e-2
+lr: 1e-3
 model:
   descriptions: 'BF_CNN_gray'
   kernel_size: 3
@@ -24,8 +24,8 @@ model:
   num_layers: 20
   num_channels: 1
 no_cuda: False
-loss_iter: 1000
-eval_iter: 100000
+loss_iter: 500
+eval_iter: 1000
 
 hydra:
   run:
