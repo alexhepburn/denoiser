@@ -175,8 +175,12 @@ if __name__ == "__main__":
     parser.add_argument("--local_rank", type=int)
     parser.add_argument("--config_dir", type=str)
     parser.add_argument("--config_name", type=str)
+    parser.add_argument("--output_dir", type=str)
     args = parser.parse_args()
 
     initialize_config_dir(config_dir=args.config_dir)
     cfg = compose(config_name=args.config_name)
-    main(cfg)
+
+    os.chdir(args.output_dir)
+
+    main(cfg)   

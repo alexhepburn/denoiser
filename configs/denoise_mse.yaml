@@ -22,8 +22,8 @@ model:
   num_layers: 20
   num_channels: 1
 no_cuda: False
-loss_iter: 1000
-eval_iter: 100000
+loss_iter: 100
+eval_iter: 500
 
 hydra:
   run:
