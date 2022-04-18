@@ -1,0 +1,31 @@
+dataset:
+  type: 'noise'
+  dir:
+    train: ''
+    test: '/user/home/ah13558/code/kodak/PhotoCD_PCD0992'
+  batch_size: 128
+  test_batch_size: 1
+  num_workers: 4
+  min: 0.0
+  max: 1.0
+epochs: 100
+loss:
+  name: 'dists'
+  kwargs:
+    device: 'cuda'
+lr: 1e-3
+model:
+  descriptions: 'BF_CNN_gray'
+  kernel_size: 3
+  padding: 1
+  num_kernels: 64
+  num_layers: 20
+  num_channels: 1
+no_cuda: False
+loss_iter: 100
+eval_iter: 500
+
+hydra:
+  run:
+    # Output directory for normal runs
+    dir: /user/work/ah13558/denoiser_outputs/${now:%Y-%m-%d_%H-%M-%S}

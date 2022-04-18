@@ -4,10 +4,24 @@ import torch.nn.functional as F
 
 import numpy as np
 
+from DISTS_pytorch import DISTS
+
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 
 from expert.models import LaplacianPyramid
 
+
+class DISTS_Loss(nn.Module):
+    def __init__(self, device=None):
+        super().__init__()
+        self.D = DISTS()
+        if device:
+            self.D = self.D.to(device)
+
+    def forward(self, output, target):
+        dists_loss = self.D(
+            target, output, require_grad=True, batch_average=True)
+        return dists_loss
 
 
 class NLPD_Loss(nn.Module):

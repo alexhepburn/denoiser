@@ -20,6 +20,7 @@ from dataset import h5Dataset, NoiseDataset, Kodak
 LOSSES = {
     'mse': MSE_Loss,
     'nlpd': NLPD_Loss
+    'dists': DISTS_Loss
 }
 
 
