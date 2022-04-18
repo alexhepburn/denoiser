@@ -13,13 +13,13 @@ import wandb
 
 from network import BF_CNN
 
-from losses import MSE_Loss, NLPD_Loss, ssim, psnr
+from losses import MSE_Loss, NLPD_Loss, ssim, psnr, DISTS_Loss
 
 from dataset import h5Dataset, NoiseDataset, Kodak
 
 LOSSES = {
     'mse': MSE_Loss,
-    'nlpd': NLPD_Loss
+    'nlpd': NLPD_Loss,
     'dists': DISTS_Loss
 }
 

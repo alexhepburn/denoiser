@@ -12,7 +12,7 @@ from expert.models import LaplacianPyramid
 
 
 class DISTS_Loss(nn.Module):
-    def __init__(self, device=None):
+    def __init__(self, device=None, **kwargs):
         super().__init__()
         self.D = DISTS()
         if device:
@@ -25,7 +25,7 @@ class DISTS_Loss(nn.Module):
 
 
 class NLPD_Loss(nn.Module):
-    def __init__(self, stages=6, dims=3, device=None):
+    def __init__(self, stages=6, dims=3, device=None, **kwargs):
         super().__init__()
         self.pyr = LaplacianPyramid(stages, dims=dims)
         if device:
